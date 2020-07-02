@@ -140,6 +140,30 @@ callWithJQuery ($) ->
             value: -> @inner.value() / data.getAggregator(@selector...).inner.value()
             numInputs: wrapped(x...)().numInputs
 
+        movingSum: (formatter=usFmt) -> ([attr]) -> (data, rowKey, colKey) ->
+            sum: 0
+            push: (record) -> @sum += parseFloat(record[attr]) if not isNaN parseFloat(record[attr])
+            value: ->
+                colKeys=data.getColKeys()
+                counter = 0
+                flat_col_key=colKey.join(String.fromCharCode(0))
+                for item in colKeys
+                    flat_item=item.join(String.fromCharCode(0))
+                    if flat_item is flat_col_key
+                      itter=counter
+                    counter++
+                prev_value=0
+                if itter >0
+                  for i in [1...itter+1]
+                    aggregator = data.getAggregator(rowKey, colKeys[itter-i])
+                    if 'sum' of aggregator
+                      prev_value += aggregator.sum
+        
+                return @sum + prev_value
+        
+            format: formatter
+            numInputs: 1
+    
     aggregatorTemplates.countUnique = (f) -> aggregatorTemplates.uniques(((x) -> x.length), f)
     aggregatorTemplates.listUnique =  (s) -> aggregatorTemplates.uniques(((x) -> x.sort(naturalSort).join(s)), ((x)->x))
     aggregatorTemplates.max =         (f) -> aggregatorTemplates.extremes('max', f)
@@ -157,6 +181,7 @@ callWithJQuery ($) ->
         "Count Unique Values":  tpl.countUnique(usFmtInt)
         "List Unique Values":   tpl.listUnique(", ")
         "Sum":                  tpl.sum(usFmt)
+        "Moving Sum":           tpl.movingSum(usFmt)
         "Integer Sum":          tpl.sum(usFmtInt)
         "Average":              tpl.average(usFmt)
         "Median":               tpl.median(usFmt)
